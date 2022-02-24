@@ -1,7 +1,7 @@
 use anyhow::Result;
 use tch::{CModule, IValue, IndexOp, Tensor};
 
-use crate::audio::{self, AudioConfig};
+use crate::utils::audio::{self, AudioConfig};
 
 pub struct SpeakerManager {
     audio_config: AudioConfig,

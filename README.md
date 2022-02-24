@@ -6,6 +6,11 @@ Currently, only the `YourTTS` for `VC` has been implemented.
 
 So, feel free to contribute us to make it better.
 
+## Milestones
+
+* [ ] YourTTS + TTS
+* [x] YourTTS + VC
+
 ## Import from Pretrained Models
 
 Currently, only the `YourTTS` for `VC` has been implemented.

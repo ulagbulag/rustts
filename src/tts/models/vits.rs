@@ -1,6 +1,8 @@
 use anyhow::Result;
 use tch::{CModule, IValue, Tensor};
 
+use crate::utils::config::Config;
+
 pub struct Vits {
     model: CModule,
 }
@@ -10,6 +12,18 @@ impl Vits {
         Ok(Self {
             model: CModule::load(model_path)?,
         })
+    }
+
+    pub fn make_symbols<'a>(&self, config: &'a Config) -> Vec<&'a str> {
+        let pad = &config.characters.pad;
+        let punctuations = &config.characters.punctuations;
+        let letters = &config.characters.characters;
+        if config.use_phonemes {
+            let letters_ipa = &config.characters.phonemes;
+            vec![pad, punctuations, letters, letters_ipa]
+        } else {
+            vec![pad, punctuations, letters]
+        }
     }
 
     pub fn voice_conversion(

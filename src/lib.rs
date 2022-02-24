@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate anyhow;
 
-pub mod audio;
 pub mod tts;
 pub mod utils;
 
@@ -9,22 +8,29 @@ use anyhow::Result;
 use tch::{IValue, Kind, Tensor};
 
 pub struct TTS {
-    ap: crate::audio::AudioProcessor,
+    ap: crate::utils::audio::AudioProcessor,
+    config: crate::utils::config::Config,
     model: crate::tts::models::vits::Vits,
     speaker_manager: crate::utils::speakers::SpeakerManager,
 }
 
 impl TTS {
     pub fn try_default(model_path: &str, speaker_encoder_path: &str) -> Result<Self> {
+        let config = crate::utils::config::Config {
+            audio: crate::utils::audio::AudioConfig::with_vits(),
+            ..Default::default()
+        };
+
         Ok(Self {
-            ap: crate::audio::AudioProcessor::try_new(crate::audio::AudioConfig::with_vits())?,
+            ap: crate::utils::audio::AudioProcessor::try_new(config.audio.clone())?,
+            config,
             model: crate::tts::models::vits::Vits::try_new(model_path)?,
             speaker_manager: crate::utils::speakers::SpeakerManager::try_new(speaker_encoder_path)?,
         })
     }
 
     pub fn compute_spec(&self, filename: &str) -> Result<(Tensor, Tensor)> {
-        let y = crate::audio::open_wav(filename)?;
+        let y = crate::utils::audio::open_wav(filename)?;
         let spec = self.ap.spectrogram(y);
         let spec = spec.unsqueeze(0).to_kind(Kind::Float);
         let y_lengths = tch::Tensor::of_slice(&[*spec.size().last().unwrap()]);
@@ -33,6 +39,14 @@ impl TTS {
 
     pub fn embed(&self, files: &[&str]) -> Result<Tensor> {
         self.speaker_manager.embed(files)
+    }
+
+    pub fn synthesis(&self) -> Result<()> {
+        // GST processing
+        let custom_symbols = self.model.make_symbols(&self.config);
+
+        // preprocess the given text
+        todo!()
     }
 
     pub fn voice_conversion(
