@@ -35,6 +35,6 @@ fn main() -> Result<()> {
 
     let ref_wav_voc = tts.voice_conversion(&driving_spec, &y_lengths, &driving_emb, &target_emb)?;
 
-    rustts::audio::save_wav(ref_wav_voc, "output.wav")?;
+    rustts::utils::audio::save_wav(ref_wav_voc, "output.wav")?;
     Ok(())
 }
