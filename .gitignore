@@ -17,6 +17,10 @@ Cargo.lock
 /.vscode/
 
 # Outputs
-**/*.pt
-**/*.wav
-/assets
+**/*.json
+**/*.npy
+# **/*.pt
+**/*.pth.tar
+/assets/**/TTS
+/assets/*.wav
+/*.wav

@@ -1,3 +1,5 @@
+use std::{fs, path::PathBuf};
+
 use anyhow::Result;
 use tch::{Device, Kind, Tensor};
 
@@ -184,6 +186,16 @@ impl AudioConfig {
             ..Default::default()
         }
     }
+}
+
+pub fn get_wav_files(path: &str) -> Result<Vec<String>> {
+    Ok(fs::read_dir(PathBuf::from(path))?
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|e| e.extension().and_then(|e| e.to_str()) == Some("wav"))
+        .map(|e| e.to_string_lossy().to_string())
+        .collect())
 }
 
 pub fn open_wav(filename: &str) -> Result<Tensor> {

@@ -1,40 +1,31 @@
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    let model_path = "./assets/vits.pt";
+    // Load a Model
+    let model_path = "./assets/vits";
     let speaker_encoder_path = "./assets/speaker_encoder.pt";
     let tts = rustts::TTS::try_default(model_path, speaker_encoder_path)?;
 
-    let (driving_spec, y_lengths) = tts.compute_spec("../recording.wav")?;
+    // Command-line Arguments
+    let x = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "./assets/samples/speaker_man_korean/000000.wav".to_string());
+    let speaker_cond_src = std::env::args()
+        .nth(2)
+        .unwrap_or_else(|| "./assets/samples/speaker_man_korean/".to_string());
+    let speaker_cond_tgt = std::env::args()
+        .nth(3)
+        .unwrap_or_else(|| "./assets/samples/speaker_woman_english/".to_string());
 
-    let target_emb = tts.embed(&[
-        "../target_0.wav",
-        "../target_1.wav",
-        "../target_2.wav",
-        "../target_3.wav",
-        "../target_4.wav",
-        "../target_5.wav",
-        "../target_6.wav",
-        "../target_7.wav",
-        "../target_8.wav",
-    ])?;
+    // Parameters
+    let x = tts.compute_spec(&x)?;
+    let speaker_cond_src = tts.embed(&rustts::utils::audio::get_wav_files(&speaker_cond_src)?)?;
+    let speaker_cond_tgt = tts.embed(&rustts::utils::audio::get_wav_files(&speaker_cond_tgt)?)?;
 
-    let driving_emb = tts.embed(&[
-        "../driving_ref_1.wav",
-        "../driving_ref_3.wav",
-        "../driving_ref_4.wav",
-        "../driving_ref_5.wav",
-        "../driving_ref_6.wav",
-        "../driving_ref_7.wav",
-        "../driving_ref_8.wav",
-        "../driving_ref_9.wav",
-        "../driving_ref_10.wav",
-        "../driving_ref_11.wav",
-        "../driving_ref_12.wav",
-    ])?;
+    // Forward
+    let ref_wav_voc = tts.voice_conversion(&x, &speaker_cond_src, &speaker_cond_tgt)?;
 
-    let ref_wav_voc = tts.voice_conversion(&driving_spec, &y_lengths, &driving_emb, &target_emb)?;
-
-    rustts::utils::audio::save_wav(ref_wav_voc, "output.wav")?;
+    // Save to .wav file
+    rustts::utils::audio::save_wav(ref_wav_voc, "output-vc.wav")?;
     Ok(())
 }

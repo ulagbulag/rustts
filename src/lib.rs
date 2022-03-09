@@ -1,3 +1,5 @@
+#![feature(map_first_last)]
+
 #[macro_use]
 extern crate anyhow;
 
@@ -29,36 +31,41 @@ impl TTS {
         })
     }
 
-    pub fn compute_spec(&self, filename: &str) -> Result<(Tensor, Tensor)> {
+    pub fn compute_spec(&self, filename: &str) -> Result<Tensor> {
         let y = crate::utils::audio::open_wav(filename)?;
         let spec = self.ap.spectrogram(y);
         let spec = spec.unsqueeze(0).to_kind(Kind::Float);
-        let y_lengths = tch::Tensor::of_slice(&[*spec.size().last().unwrap()]);
-        Ok((spec, y_lengths))
+        Ok(spec)
     }
 
-    pub fn embed(&self, files: &[&str]) -> Result<Tensor> {
+    pub fn embed(&self, files: &[impl AsRef<str>]) -> Result<Tensor> {
         self.speaker_manager.embed(files)
     }
 
-    pub fn synthesis(&self) -> Result<()> {
-        // GST processing
-        let custom_symbols = self.model.make_symbols(&self.config);
-
+    pub fn synthesis(&self, text: &str, speaker_emb: &Tensor, language_id: i64) -> Result<Tensor> {
         // preprocess the given text
-        todo!()
+        let text_inputs = self.config.text_to_sequence(text).unsqueeze(0);
+        let language_id = Tensor::of_slice(&[language_id]);
+
+        if let IValue::Tensor(model_outputs) =
+            self.model
+                .inference(&text_inputs, speaker_emb, &language_id)?
+        {
+            Ok(model_outputs.squeeze())
+        } else {
+            unreachable!()
+        }
     }
 
     pub fn voice_conversion(
         &self,
-        driving_spec: &Tensor,
-        y_lengths: &Tensor,
-        driving_emb: &Tensor,
-        target_emb: &Tensor,
+        x: &Tensor,
+        speaker_cond_src: &Tensor,
+        speaker_cond_tgt: &Tensor,
     ) -> Result<Tensor> {
-        let ref_wav =
-            self.model
-                .voice_conversion(&driving_spec, &y_lengths, &driving_emb, &target_emb)?;
+        let ref_wav = self
+            .model
+            .voice_conversion(x, speaker_cond_src, speaker_cond_tgt)?;
 
         let ref_wav_voc = if let IValue::Tuple(mut ref_wav) = ref_wav {
             if let IValue::Tuple(mut z_tuple) = ref_wav.pop().unwrap() {

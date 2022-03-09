@@ -3,6 +3,8 @@ use tch::{CModule, IValue, IndexOp, Tensor};
 
 use crate::utils::audio::{self, AudioConfig};
 
+use super::functional::normalize;
+
 pub struct SpeakerManager {
     audio_config: AudioConfig,
     speaker_encoder: CModule,
@@ -16,14 +18,14 @@ impl SpeakerManager {
         })
     }
 
-    pub fn embed(&self, files: &[&str]) -> Result<Tensor> {
+    pub fn embed(&self, files: &[impl AsRef<str>]) -> Result<Tensor> {
         if files.is_empty() {
             bail!("No files were given.");
         }
 
         let mut d_vectors: Option<Tensor> = None;
         for filename in files {
-            let waveform = audio::open_wav(filename)?;
+            let waveform = audio::open_wav(filename.as_ref())?;
             let waveform = waveform.unsqueeze(0);
 
             let d_vector = self.compute_embedding(&waveform)?;
@@ -67,6 +69,7 @@ impl SpeakerManager {
         let frames_batch: IValue = frames_batch.into();
         let embedding = self.speaker_encoder.forward_is(&[frames_batch])?;
         let embedding: Tensor = embedding.try_into()?;
+        let embedding = normalize(&embedding);
 
         if return_mean {
             Ok(embedding.mean_dim(&[0], true, embedding.kind()))

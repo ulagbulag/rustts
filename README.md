@@ -2,60 +2,39 @@
 
 `RusTTS` is an unofficial [ `Coqui TTS` ](https://github.com/coqui-ai/tts) implementation.
 
-Currently, only the `YourTTS` for `VC` has been implemented.
+Currently, only the `YourTTS` for [ `TTS` & `VC` ] has been implemented.
 
 So, feel free to contribute us to make it better.
 
 ## Milestones
 
-* [ ] YourTTS + TTS
+* [x] YourTTS + TTS
 * [x] YourTTS + VC
+* [ ] Attach LICENSE for sample data
+* [ ] Non-English Characters
+* [ ] [`Arpabet`](https://github.com/echelon/arpabet.rs) Support
+* [ ] SSML support
+    - Note: `Coqui TTS` has no `SSML support` yet, so we can support both.
 
 ## Import from Pretrained Models
 
-Currently, only the `YourTTS` for `VC` has been implemented.
+Currently, only the `YourTTS` for [ `TTS` & `VC` ] has been implemented.
 
-### YourTTS + VC
+1. TODO: Show the `diff` of Coqui TTS source code.
+2. Run the code: `./assets/vits/converter.ipynb`
+    - The original code is derived from `VITS` examples.
+    - TODO: Store the models in the Cloud Storage, not in git-managed.
 
-```python
-import os
-import torch
+## Examples
 
-# Create a model directory
-os.makedirs('assets/', exist_ok=True)
+### TTS
 
-# Load the pretrained models & variables
-# NOTE: use the variables from `YourTTS_zeroshot_VC_demo.ipynb`
-# NOTE: https://github.com/edresson/yourtts#colab-demos
-SE_speaker_manager = ...
-model = ...
+```bash
+cargo run --example tts -- "Hello Mr. my yesterday"
+```
 
-driving_spec = ...
-y_lengths = ...
-driving_emb = ...
-target_emb = ...
+### Voice Conversion
 
-# Convert the pretrained model of speaker_encoder
-# NOTE: Please mark ResNetSpeakerEncoder::l2_norm => true
-model_speaker_encoder = torch.jit.trace(
-    SE_speaker_manager.speaker_encoder,
-    torch.randn(1, 129150),  # dummy
-)
-model_speaker_encoder.save('assets/speaker_encoder.pt')
-
-# Convert the pretrained model of Vits (YourTTS)
-class VoiceConversion(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.model = model
-        
-    def forward(self, *args):
-        return self.model.voice_conversion(*args)
-
-model_voice_conversion = VoiceConversion(model)
-model_voice_conversion = torch.jit.trace(
-    model_voice_conversion,
-    (driving_spec, y_lengths, driving_emb, target_emb,),  # maybe dummy
-)
-model_voice_conversion.save('assets/vits.pt')
+```bash
+cargo run --example vc
 ```
