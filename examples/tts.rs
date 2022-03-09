@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rustts::tts::SynthesisOptions;
 
 fn main() -> Result<()> {
     // Load a Model
@@ -17,10 +18,13 @@ fn main() -> Result<()> {
     // Parameters
     let text = text;
     let speaker_emb = tts.embed(&rustts::utils::audio::get_wav_files(&speaker_emb)?)?;
-    let language_id = 0;
+    let options = SynthesisOptions {
+        length_scale: 1.0,
+        ..Default::default()
+    };
 
     // Forward
-    let ref_wav_voc = tts.synthesis(&text, &speaker_emb, language_id)?;
+    let ref_wav_voc = tts.synthesis(&text, &speaker_emb, &options)?;
 
     // Save to .wav file
     rustts::utils::audio::save_wav(ref_wav_voc, "output-tts.wav")?;

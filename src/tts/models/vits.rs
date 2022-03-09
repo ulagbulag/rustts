@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use tch::{CModule, IValue, Kind, Scalar, Tensor};
 
-use crate::utils::functional::normalize;
+use crate::{tts::SynthesisOptions, utils::functional::normalize};
 
 pub struct Vits {
     // TODO: Use TorchScript instead (so that we can remove the dedicated reversed model)
@@ -38,7 +38,7 @@ impl Vits {
         &self,
         x: &Tensor,
         speaker_emb: &Tensor,
-        language_id: &Tensor,
+        options: &SynthesisOptions,
     ) -> Result<IValue> {
         fn sequence_mask(sequence_length: &Tensor, max_len: impl Into<Scalar>) -> Tensor {
             let seq_range =
@@ -74,11 +74,8 @@ impl Vits {
             path * mask
         }
 
-        let length_scale: f64 = 1.0;
-        let inference_noise_scale: f64 = 0.0;
-        let max_inference_len = None;
-
         let x_lengths = tch::Tensor::of_slice(&[*x.size().last().unwrap()]);
+        let language_id = Tensor::of_slice(&[options.language_id]);
 
         let x = x.detach().into();
         let x_lengths = x_lengths.into();
@@ -109,10 +106,10 @@ impl Vits {
         let logw: Tensor = {
             let x = x.detach().into();
             let x_mask = x_mask.detach().into();
-            let dr = Tensor::zeros_like(language_id).into();
+            let dr = Tensor::zeros_like(&language_id).into();
             let lang_emb = lang_emb.into();
             let reverse = Tensor::of_slice(&[true]).into();
-            let noise_scale = Tensor::of_slice(&[inference_noise_scale as f32]).into();
+            let noise_scale = Tensor::of_slice(&[options.inference_noise_scale as f32]).into();
 
             self.duration_predictor_reversed
                 .forward_is(&[
@@ -128,7 +125,7 @@ impl Vits {
                 .try_into()?
         };
 
-        let w = logw.exp() * (&x_mask) * length_scale;
+        let w = logw.exp() * (&x_mask) * options.length_scale;
         let w_ceil = w.ceil();
         let y_lengths = w_ceil
             .sum_dim_intlist(&[1, 2], false, w_ceil.kind())
@@ -153,7 +150,7 @@ impl Vits {
             .matmul(&logs_p.transpose(1, 2))
             .transpose(1, 2);
 
-        let z_p = (&m_p) + Tensor::randn_like(&m_p) * logs_p.exp() * inference_noise_scale;
+        let z_p = (&m_p) + Tensor::randn_like(&m_p) * logs_p.exp() * options.inference_noise_scale;
         let z: Tensor = {
             let z_p = z_p.into();
             let y_mask = y_mask.detach().into();
@@ -163,7 +160,9 @@ impl Vits {
                 .try_into()?
         };
         {
-            let input = (z * y_mask).slice(2, 0, max_inference_len, 1).into();
+            let input = (z * y_mask)
+                .slice(2, 0, options.max_inference_len, 1)
+                .into();
             self.waveform_decoder
                 .forward_is(&[&input, &g])
                 .map_err(Into::into)

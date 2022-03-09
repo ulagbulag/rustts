@@ -8,6 +8,7 @@ pub mod utils;
 
 use anyhow::Result;
 use tch::{IValue, Kind, Tensor};
+use tts::SynthesisOptions;
 
 pub struct TTS {
     ap: crate::utils::audio::AudioProcessor,
@@ -42,14 +43,17 @@ impl TTS {
         self.speaker_manager.embed(files)
     }
 
-    pub fn synthesis(&self, text: &str, speaker_emb: &Tensor, language_id: i64) -> Result<Tensor> {
+    pub fn synthesis(
+        &self,
+        text: &str,
+        speaker_emb: &Tensor,
+        options: &SynthesisOptions,
+    ) -> Result<Tensor> {
         // preprocess the given text
         let text_inputs = self.config.text_to_sequence(text).unsqueeze(0);
-        let language_id = Tensor::of_slice(&[language_id]);
 
         if let IValue::Tensor(model_outputs) =
-            self.model
-                .inference(&text_inputs, speaker_emb, &language_id)?
+            self.model.inference(&text_inputs, speaker_emb, options)?
         {
             Ok(model_outputs.squeeze())
         } else {
