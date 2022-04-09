@@ -10,6 +10,7 @@ So, feel free to contribute us to make it better.
 
 * [x] YourTTS + TTS
 * [x] YourTTS + VC
+* [ ] Migrate to [ONNX](https://github.com/ulagbulag-village/onnxruntime-rs/)
 * [ ] Attach LICENSE for sample data
 * [ ] Non-English Characters
 * [ ] [`Arpabet`](https://github.com/echelon/arpabet.rs) Support
