@@ -10,7 +10,7 @@ anyhow = "1.0"
 hound = "3.4"
 itertools = "0.10"
 ndarray = "0.15"
-tch = "0.7"
+tch = "0.8"
 
 [[example]]
 name = "tts"
